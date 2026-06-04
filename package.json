@@ -1,0 +1,35 @@
+{
+  "name": "@uphoto/photo-upload",
+  "version": "0.1.0",
+  "description": "Reusable React photo upload flow with crop, validation request, and save steps.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": [
+    "./dist/styles.css"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "prepack": "npm run build",
+    "check:pack": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "axios": "^1.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.11"
+  }
+}
