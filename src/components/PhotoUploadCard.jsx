@@ -44,7 +44,11 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
     validatedCroppedBlob,
     validatedCroppedUrl,
     zoom,
-  } = usePhotoUpload({ validationUrl, saveUrl })
+  } = usePhotoUpload({
+    validationUrl,
+    saveUrl,
+    onSaveSuccess: isModal ? onCancel : undefined,
+  })
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 1024 : window.innerWidth,
   )

@@ -30,7 +30,7 @@ import {
   triggerBlobDownload,
 } from './utils.js'
 
-export function usePhotoUpload({ validationUrl, saveUrl } = {}) {
+export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [imageDimensions, setImageDimensions] = useState(null)
@@ -383,6 +383,7 @@ export function usePhotoUpload({ validationUrl, saveUrl } = {}) {
 
       setSaveResponseData(payload)
       setSaveMessage(payload?.message || PHOTO_SAVE_SUCCESS_MESSAGE)
+      onSaveSuccess?.(payload)
     } catch (error) {
       setErrorMessage(error.message || PHOTO_SAVE_FAILED_ERROR_MESSAGE)
     } finally {

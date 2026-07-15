@@ -89,6 +89,7 @@ Save behavior:
 - Uses form field name `photo` and sends the same cropped JPEG that passed validation.
 - Sends cookies/credentials (`withCredentials: true`).
 - Treats any `2xx` response as successful.
+- Closes the upload modal automatically after a successful save. Inline flows remain open.
 
 ## File Rules
 
