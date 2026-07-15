@@ -7,7 +7,10 @@ import './styles.css'
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <main className="dev-shell">
-      <PhotoUploadCard uploadUrl="/api/validate-photo" />
+      <PhotoUploadCard
+        validationUrl="/api/validate-photo"
+        saveUrl="/api/save-photo"
+      />
     </main>
   </React.StrictMode>,
 )

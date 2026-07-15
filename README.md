@@ -17,10 +17,11 @@ npm install @uphoto/photo-upload react react-dom axios
 import '@uphoto/photo-upload/styles.css'
 import { PhotoUploadCard } from '@uphoto/photo-upload'
 
-function Example({ uploadUrl }) {
+function Example({ validationUrl, saveUrl }) {
   return (
     <PhotoUploadCard
-      uploadUrl={uploadUrl}
+      validationUrl={validationUrl}
+      saveUrl={saveUrl}
       openInModal
       openButtonLabel="Upload photo"
       containerClassName="profile-photo-upload"
@@ -30,13 +31,15 @@ function Example({ uploadUrl }) {
 }
 ```
 
-`uploadUrl` should point to your photo validation endpoint (for example: `https://api.example.com/photo`).
+`validationUrl` and `saveUrl` should point to the validation and persistence endpoints.
 
 ## Props
 
 `PhotoUploadCard` props:
 
-- `uploadUrl` (`string`, default `''`): endpoint used for photo validation.
+- `validationUrl` (`string`, default `''`): endpoint used for photo validation.
+- `saveUrl` (`string`, default `''`): endpoint used to persist an accepted photo.
+- `uploadUrl` (`string`, default `''`): deprecated alias for `validationUrl`.
 - `openInModal` (`boolean`, default `false`): opens the flow in a modal.
 - `openButtonLabel` (`string`, default `'Open Photo Upload'`): label for modal opener button.
 - `openButtonVariant` (`'primary' | 'secondary'`, default `'primary'`): opener button style.
@@ -49,7 +52,7 @@ function Example({ uploadUrl }) {
 
 Validation submit behavior:
 
-- Sends `POST` request to `uploadUrl` as `multipart/form-data`.
+- Sends a `POST` request to `validationUrl` as `multipart/form-data`.
 - Uses form field name `photo`.
 - Sends cookies/credentials (`withCredentials: true`).
 - Converts the cropped output to JPEG (`1200x1600`) with filename format `<original-name>-3x4.jpg`.
@@ -65,16 +68,20 @@ Minimal success response example:
 }
 ```
 
+Save behavior:
+
+- Is enabled only after validation returns `report.accept === true`.
+- Sends a `POST` request to `saveUrl` as `multipart/form-data`.
+- Uses form field name `photo` and sends the same cropped JPEG that passed validation.
+- Sends cookies/credentials (`withCredentials: true`).
+- Treats any `2xx` response as successful.
+
 ## File Rules
 
 - Accepted formats: `PNG`, `JPG`, `JPEG`.
 - Max size: `10 MB`.
 - Minimum dimensions: `1200 x 1600`.
 - Interactive preview frame: `300 x 400` (3:4).
-
-## Current Limitation
-
-- The `Save` action currently does not call an API yet. It shows a placeholder confirmation message.
 
 ## Styling
 
@@ -99,7 +106,8 @@ You can scope the theme with `containerClassName`:
 
 ```jsx
 <PhotoUploadCard
-  uploadUrl={uploadUrl}
+  validationUrl={validationUrl}
+  saveUrl={saveUrl}
   openInModal
   openButtonLabel="Upload photo"
   containerClassName="profile-photo-upload"
