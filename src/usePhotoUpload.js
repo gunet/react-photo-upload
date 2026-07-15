@@ -30,8 +30,7 @@ import {
   triggerBlobDownload,
 } from './utils.js'
 
-export function usePhotoUpload({ validationUrl, saveUrl, uploadUrl } = {}) {
-  const resolvedValidationUrl = validationUrl || uploadUrl || ''
+export function usePhotoUpload({ validationUrl, saveUrl } = {}) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [imageDimensions, setImageDimensions] = useState(null)
@@ -296,7 +295,7 @@ export function usePhotoUpload({ validationUrl, saveUrl, uploadUrl } = {}) {
       return
     }
 
-    if (!resolvedValidationUrl) {
+    if (!validationUrl) {
       setErrorMessage(VALIDATION_URL_MISSING_ERROR_MESSAGE)
       return
     }
@@ -312,7 +311,7 @@ export function usePhotoUpload({ validationUrl, saveUrl, uploadUrl } = {}) {
       const formData = new FormData()
       formData.append('photo', croppedFile)
 
-      const response = await axios.post(resolvedValidationUrl, formData, {
+      const response = await axios.post(validationUrl, formData, {
         withCredentials: true,
         validateStatus: () => true,
       })

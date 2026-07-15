@@ -39,7 +39,6 @@ function Example({ validationUrl, saveUrl }) {
 
 - `validationUrl` (`string`, default `''`): endpoint used for photo validation.
 - `saveUrl` (`string`, default `''`): endpoint used to persist an accepted photo.
-- `uploadUrl` (`string`, default `''`): deprecated alias for `validationUrl`.
 - `openInModal` (`boolean`, default `false`): opens the flow in a modal.
 - `openButtonLabel` (`string`, default `'Open Photo Upload'`): label for modal opener button.
 - `openButtonVariant` (`'primary' | 'secondary'`, default `'primary'`): opener button style.

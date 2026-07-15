@@ -11,13 +11,11 @@ import { formatMegabytes } from '../utils.js'
 import { usePhotoUpload } from '../usePhotoUpload.js'
 import ActionButton from './internal/ActionButton.jsx'
 
-const defaultUploadUrl = ''
-
 function joinClassNames(...classNames) {
   return classNames.filter(Boolean).join(' ')
 }
 
-function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUrl = '', uploadUrl = '' }) {
+function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUrl = '' }) {
   const {
     currentStep,
     errorMessage,
@@ -46,7 +44,7 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
     validatedCroppedBlob,
     validatedCroppedUrl,
     zoom,
-  } = usePhotoUpload({ validationUrl, saveUrl, uploadUrl })
+  } = usePhotoUpload({ validationUrl, saveUrl })
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 1024 : window.innerWidth,
   )
@@ -459,7 +457,6 @@ function PhotoUploadCard({
   openButtonVariant = 'primary',
   modalTitle = 'Photo Upload',
   modalAriaLabel = 'Upload and validate your photo',
-  uploadUrl = defaultUploadUrl,
   validationUrl = '',
   saveUrl = '',
 }) {
@@ -481,7 +478,7 @@ function PhotoUploadCard({
   if (!openInModal) {
     return (
       <div className={joinClassNames('uphoto-root', containerClassName)}>
-        <PhotoUploadFlow validationUrl={validationUrl} saveUrl={saveUrl} uploadUrl={uploadUrl} />
+        <PhotoUploadFlow validationUrl={validationUrl} saveUrl={saveUrl} />
       </div>
     )
   }
@@ -513,7 +510,6 @@ function PhotoUploadCard({
             <h4 className="uphoto-sr-only">{modalTitle}</h4>
             <PhotoUploadFlow
               isModal
-              uploadUrl={uploadUrl}
               validationUrl={validationUrl}
               saveUrl={saveUrl}
               onCancel={() => setIsModalOpen(false)}
