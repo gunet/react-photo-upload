@@ -15,7 +15,7 @@ function joinClassNames(...classNames) {
   return classNames.filter(Boolean).join(' ')
 }
 
-function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUrl = '' }) {
+function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUrl = '', onSaveSuccess }) {
   const {
     currentStep,
     errorMessage,
@@ -47,7 +47,12 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
   } = usePhotoUpload({
     validationUrl,
     saveUrl,
-    onSaveSuccess: isModal ? onCancel : undefined,
+    onSaveSuccess: (payload) => {
+      onSaveSuccess?.(payload)
+      if (isModal) {
+        onCancel?.()
+      }
+    },
   })
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 1024 : window.innerWidth,
@@ -463,6 +468,7 @@ function PhotoUploadCard({
   modalAriaLabel = 'Upload and validate your photo',
   validationUrl = '',
   saveUrl = '',
+  onSaveSuccess,
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -482,7 +488,7 @@ function PhotoUploadCard({
   if (!openInModal) {
     return (
       <div className={joinClassNames('uphoto-root', containerClassName)}>
-        <PhotoUploadFlow validationUrl={validationUrl} saveUrl={saveUrl} />
+        <PhotoUploadFlow validationUrl={validationUrl} saveUrl={saveUrl} onSaveSuccess={onSaveSuccess} />
       </div>
     )
   }
@@ -516,6 +522,7 @@ function PhotoUploadCard({
               isModal
               validationUrl={validationUrl}
               saveUrl={saveUrl}
+              onSaveSuccess={onSaveSuccess}
               onCancel={() => setIsModalOpen(false)}
             />
           </div>

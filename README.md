@@ -46,6 +46,9 @@ function Example({ validationUrl, saveUrl }) {
 - `containerClassName` (`string`, default `''`): extra class on the root wrapper (`.uphoto-root`).
 - `modalTitle` (`string`, default `'Photo Upload'`): screen-reader title inside modal.
 - `modalAriaLabel` (`string`, default `'Upload and validate your photo'`): `aria-label` for modal dialog.
+- `onSaveSuccess` (`(payload) => void`, optional): called after a successful save, with the
+  parsed save response body. Fires before the modal auto-closes, so use it to refetch or
+  update whatever image/profile data the consuming app displays.
 
 ## Upload Contract
 
