@@ -17,10 +17,11 @@ npm install @uphoto/photo-upload react react-dom axios
 import '@uphoto/photo-upload/styles.css'
 import { PhotoUploadCard } from '@uphoto/photo-upload'
 
-function Example({ uploadUrl }) {
+function Example({ validationUrl, saveUrl }) {
   return (
     <PhotoUploadCard
-      uploadUrl={uploadUrl}
+      validationUrl={validationUrl}
+      saveUrl={saveUrl}
       openInModal
       openButtonLabel="Upload photo"
       containerClassName="profile-photo-upload"
@@ -30,13 +31,14 @@ function Example({ uploadUrl }) {
 }
 ```
 
-`uploadUrl` should point to your photo validation endpoint (for example: `https://api.example.com/photo`).
+`validationUrl` and `saveUrl` should point to the validation and persistence endpoints.
 
 ## Props
 
 `PhotoUploadCard` props:
 
-- `uploadUrl` (`string`, default `''`): endpoint used for photo validation.
+- `validationUrl` (`string`, default `''`): endpoint used for photo validation.
+- `saveUrl` (`string`, default `''`): endpoint used to persist an accepted photo.
 - `openInModal` (`boolean`, default `false`): opens the flow in a modal.
 - `openButtonLabel` (`string`, default `'Open Photo Upload'`): label for modal opener button.
 - `openButtonVariant` (`'primary' | 'secondary'`, default `'primary'`): opener button style.
@@ -44,18 +46,22 @@ function Example({ uploadUrl }) {
 - `containerClassName` (`string`, default `''`): extra class on the root wrapper (`.uphoto-root`).
 - `modalTitle` (`string`, default `'Photo Upload'`): screen-reader title inside modal.
 - `modalAriaLabel` (`string`, default `'Upload and validate your photo'`): `aria-label` for modal dialog.
+- `onSaveSuccess` (`(payload) => void`, optional): called after a successful save, with the
+  parsed save response body. Fires before the modal auto-closes, so use it to refetch or
+  update whatever image/profile data the consuming app displays.
 
 ## Upload Contract
 
 Validation submit behavior:
 
-- Sends `POST` request to `uploadUrl` as `multipart/form-data`.
+- Sends a `POST` request to `validationUrl` as `multipart/form-data`.
 - Uses form field name `photo`.
 - Sends cookies/credentials (`withCredentials: true`).
 - Converts the cropped output to JPEG (`1200x1600`) with filename format `<original-name>-3x4.jpg`.
-- Treats validation as accepted only when `response.data.report.accept === true`.
+- Treats validation as accepted only when `response.data.report.accept === true`, or, if the
+  response body wraps its payload in a `data` envelope, `response.data.data.report.accept === true`.
 
-Minimal success response example:
+Minimal success response example (flat):
 
 ```json
 {
@@ -65,16 +71,35 @@ Minimal success response example:
 }
 ```
 
+Minimal success response example (wrapped in a `data` envelope, e.g. a generic API response wrapper):
+
+```json
+{
+  "status": "SUCCESS",
+  "message": "Photo is valid.",
+  "data": {
+    "report": {
+      "accept": true
+    }
+  }
+}
+```
+
+Save behavior:
+
+- Is enabled only after validation returns `report.accept === true` (flat or `data`-wrapped, as above).
+- Sends a `POST` request to `saveUrl` as `multipart/form-data`.
+- Uses form field name `photo` and sends the same cropped JPEG that passed validation.
+- Sends cookies/credentials (`withCredentials: true`).
+- Treats any `2xx` response as successful.
+- Closes the upload modal automatically after a successful save. Inline flows remain open.
+
 ## File Rules
 
 - Accepted formats: `PNG`, `JPG`, `JPEG`.
 - Max size: `10 MB`.
 - Minimum dimensions: `1200 x 1600`.
 - Interactive preview frame: `300 x 400` (3:4).
-
-## Current Limitation
-
-- The `Save` action currently does not call an API yet. It shows a placeholder confirmation message.
 
 ## Styling
 
@@ -99,7 +124,8 @@ You can scope the theme with `containerClassName`:
 
 ```jsx
 <PhotoUploadCard
-  uploadUrl={uploadUrl}
+  validationUrl={validationUrl}
+  saveUrl={saveUrl}
   openInModal
   openButtonLabel="Upload photo"
   containerClassName="profile-photo-upload"

@@ -10,10 +10,12 @@ import {
   MIN_IMAGE_HEIGHT,
   MIN_IMAGE_WIDTH,
   PHOTO_NOT_ACCEPTED_ERROR_MESSAGE,
+  PHOTO_SAVE_FAILED_ERROR_MESSAGE,
+  PHOTO_SAVE_SUCCESS_MESSAGE,
   PHOTO_UPLOAD_FAILED_ERROR_MESSAGE,
-  SAVE_PENDING_MESSAGE,
+  SAVE_URL_MISSING_ERROR_MESSAGE,
   SELECT_IMAGE_ERROR_MESSAGE,
-  UPLOAD_URL_MISSING_ERROR_MESSAGE,
+  VALIDATION_URL_MISSING_ERROR_MESSAGE,
   ZOOM_STEP,
 } from './constants.js'
 import {
@@ -28,7 +30,7 @@ import {
   triggerBlobDownload,
 } from './utils.js'
 
-export function usePhotoUpload({ uploadUrl } = {}) {
+export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [imageDimensions, setImageDimensions] = useState(null)
@@ -37,12 +39,14 @@ export function usePhotoUpload({ uploadUrl } = {}) {
   const [horizontalOffset, setHorizontalOffset] = useState(0)
   const [verticalOffset, setVerticalOffset] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [responseData, setResponseData] = useState(null)
   const [validatedCroppedBlob, setValidatedCroppedBlob] = useState(null)
   const [validatedCroppedUrl, setValidatedCroppedUrl] = useState('')
   const [validatedCroppedFileName, setValidatedCroppedFileName] = useState('')
   const [saveMessage, setSaveMessage] = useState('')
+  const [saveResponseData, setSaveResponseData] = useState(null)
   const dragStateRef = useRef(null)
 
   const clearSelection = () => {
@@ -68,6 +72,7 @@ export function usePhotoUpload({ uploadUrl } = {}) {
     setResponseData(null)
     clearValidatedCroppedAsset()
     setSaveMessage('')
+    setSaveResponseData(null)
   }
 
   useEffect(() => () => clearValidatedCroppedAsset(), [])
@@ -290,8 +295,8 @@ export function usePhotoUpload({ uploadUrl } = {}) {
       return
     }
 
-    if (!uploadUrl) {
-      setErrorMessage(UPLOAD_URL_MISSING_ERROR_MESSAGE)
+    if (!validationUrl) {
+      setErrorMessage(VALIDATION_URL_MISSING_ERROR_MESSAGE)
       return
     }
 
@@ -306,7 +311,7 @@ export function usePhotoUpload({ uploadUrl } = {}) {
       const formData = new FormData()
       formData.append('photo', croppedFile)
 
-      const response = await axios.post(uploadUrl, formData, {
+      const response = await axios.post(validationUrl, formData, {
         withCredentials: true,
         validateStatus: () => true,
       })
@@ -338,8 +343,52 @@ export function usePhotoUpload({ uploadUrl } = {}) {
     }
   }
 
-  const handleSave = () => {
-    setSaveMessage(SAVE_PENDING_MESSAGE)
+  const handleSave = async () => {
+    if (!isAcceptedValidationResponse(responseData) || !validatedCroppedBlob) {
+      setErrorMessage(PHOTO_NOT_ACCEPTED_ERROR_MESSAGE)
+      return
+    }
+
+    if (!saveUrl) {
+      setErrorMessage(SAVE_URL_MISSING_ERROR_MESSAGE)
+      return
+    }
+
+    setIsSaving(true)
+    setErrorMessage('')
+    setSaveMessage('')
+    setSaveResponseData(null)
+
+    try {
+      const croppedFile = new File(
+        [validatedCroppedBlob],
+        validatedCroppedFileName,
+        {
+          type: validatedCroppedBlob.type,
+          lastModified: Date.now(),
+        },
+      )
+      const formData = new FormData()
+      formData.append('photo', croppedFile)
+
+      const response = await axios.post(saveUrl, formData, {
+        withCredentials: true,
+        validateStatus: () => true,
+      })
+      const payload = response.data ?? null
+
+      if (response.status < 200 || response.status >= 300) {
+        throw new Error(payload?.message || PHOTO_SAVE_FAILED_ERROR_MESSAGE)
+      }
+
+      setSaveResponseData(payload)
+      setSaveMessage(payload?.message || PHOTO_SAVE_SUCCESS_MESSAGE)
+      onSaveSuccess?.(payload)
+    } catch (error) {
+      setErrorMessage(error.message || PHOTO_SAVE_FAILED_ERROR_MESSAGE)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const previewMetrics = getCurrentPreviewMetrics()
@@ -361,12 +410,14 @@ export function usePhotoUpload({ uploadUrl } = {}) {
     hasSelectedImage,
     imageDimensions,
     isUploading,
+    isSaving,
     isValidated,
     previewMetrics,
     previewUrl,
     resetAlignment,
     responseData,
     saveMessage,
+    saveResponseData,
     selectedFile,
     setCurrentStep,
     validatedCroppedBlob,

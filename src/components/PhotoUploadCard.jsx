@@ -11,13 +11,11 @@ import { formatMegabytes } from '../utils.js'
 import { usePhotoUpload } from '../usePhotoUpload.js'
 import ActionButton from './internal/ActionButton.jsx'
 
-const defaultUploadUrl = ''
-
 function joinClassNames(...classNames) {
   return classNames.filter(Boolean).join(' ')
 }
 
-function PhotoUploadFlow({ isModal = false, onCancel, uploadUrl = '' }) {
+function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUrl = '', onSaveSuccess }) {
   const {
     currentStep,
     errorMessage,
@@ -33,18 +31,29 @@ function PhotoUploadFlow({ isModal = false, onCancel, uploadUrl = '' }) {
     hasSelectedImage,
     imageDimensions,
     isUploading,
+    isSaving,
     isValidated,
     previewMetrics,
     previewUrl,
     resetAlignment,
     responseData,
     saveMessage,
+    saveResponseData,
     selectedFile,
     setCurrentStep,
     validatedCroppedBlob,
     validatedCroppedUrl,
     zoom,
-  } = usePhotoUpload({ uploadUrl })
+  } = usePhotoUpload({
+    validationUrl,
+    saveUrl,
+    onSaveSuccess: (payload) => {
+      onSaveSuccess?.(payload)
+      if (isModal) {
+        onCancel?.()
+      }
+    },
+  })
   const [viewportWidth, setViewportWidth] = useState(
     typeof window === 'undefined' ? 1024 : window.innerWidth,
   )
@@ -123,11 +132,11 @@ function PhotoUploadFlow({ isModal = false, onCancel, uploadUrl = '' }) {
         <ActionButton
           type="button"
           variant="primary"
-          disabled={!isValidated}
+          disabled={!isValidated || isSaving}
           onClick={handleSave}
           className={footerButtonClassName}
         >
-          Save
+          {isSaving ? 'Saving...' : 'Save'}
         </ActionButton>
       </>
     )
@@ -388,6 +397,10 @@ function PhotoUploadFlow({ isModal = false, onCancel, uploadUrl = '' }) {
                 <p className="uphoto-copy">The photo is already validated. Continue with save when you are ready.</p>
               </div>
 
+              {errorMessage ? (
+                <p className="uphoto-alert uphoto-alert--error">{errorMessage}</p>
+              ) : null}
+
               <div className="uphoto-info-card">
                 <p className="uphoto-label">Validated Preview</p>
                 <div className="uphoto-preview-center">
@@ -409,7 +422,14 @@ function PhotoUploadFlow({ isModal = false, onCancel, uploadUrl = '' }) {
               </div>
 
               {saveMessage ? (
-                <p className="uphoto-note">{saveMessage}</p>
+                <p className="uphoto-alert uphoto-alert--success">{saveMessage}</p>
+              ) : null}
+
+              {saveResponseData ? (
+                <div className="uphoto-info-card">
+                  <p className="uphoto-label">Save Response</p>
+                  <pre className="uphoto-response-pre">{JSON.stringify(saveResponseData, null, 2)}</pre>
+                </div>
               ) : null}
             </div>
           ) : null}
@@ -446,7 +466,9 @@ function PhotoUploadCard({
   openButtonVariant = 'primary',
   modalTitle = 'Photo Upload',
   modalAriaLabel = 'Upload and validate your photo',
-  uploadUrl = defaultUploadUrl,
+  validationUrl = '',
+  saveUrl = '',
+  onSaveSuccess,
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -466,7 +488,7 @@ function PhotoUploadCard({
   if (!openInModal) {
     return (
       <div className={joinClassNames('uphoto-root', containerClassName)}>
-        <PhotoUploadFlow uploadUrl={uploadUrl} />
+        <PhotoUploadFlow validationUrl={validationUrl} saveUrl={saveUrl} onSaveSuccess={onSaveSuccess} />
       </div>
     )
   }
@@ -498,7 +520,9 @@ function PhotoUploadCard({
             <h4 className="uphoto-sr-only">{modalTitle}</h4>
             <PhotoUploadFlow
               isModal
-              uploadUrl={uploadUrl}
+              validationUrl={validationUrl}
+              saveUrl={saveUrl}
+              onSaveSuccess={onSaveSuccess}
               onCancel={() => setIsModalOpen(false)}
             />
           </div>

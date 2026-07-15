@@ -20,6 +20,7 @@
     "./dist/styles.css"
   ],
   "scripts": {
+    "dev": "vite --config dev/vite.config.mjs",
     "build": "node ./scripts/build.mjs",
     "prepack": "npm run build",
     "check:pack": "npm pack --dry-run"
@@ -30,6 +31,11 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "esbuild": "^0.25.11"
+    "@vitejs/plugin-react": "^5.1.1",
+    "axios": "^1.17.0",
+    "esbuild": "^0.25.11",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "vite": "^7.2.6"
   }
 }
