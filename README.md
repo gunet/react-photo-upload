@@ -56,9 +56,10 @@ Validation submit behavior:
 - Uses form field name `photo`.
 - Sends cookies/credentials (`withCredentials: true`).
 - Converts the cropped output to JPEG (`1200x1600`) with filename format `<original-name>-3x4.jpg`.
-- Treats validation as accepted only when `response.data.report.accept === true`.
+- Treats validation as accepted only when `response.data.report.accept === true`, or, if the
+  response body wraps its payload in a `data` envelope, `response.data.data.report.accept === true`.
 
-Minimal success response example:
+Minimal success response example (flat):
 
 ```json
 {
@@ -68,9 +69,23 @@ Minimal success response example:
 }
 ```
 
+Minimal success response example (wrapped in a `data` envelope, e.g. a generic API response wrapper):
+
+```json
+{
+  "status": "SUCCESS",
+  "message": "Photo is valid.",
+  "data": {
+    "report": {
+      "accept": true
+    }
+  }
+}
+```
+
 Save behavior:
 
-- Is enabled only after validation returns `report.accept === true`.
+- Is enabled only after validation returns `report.accept === true` (flat or `data`-wrapped, as above).
 - Sends a `POST` request to `saveUrl` as `multipart/form-data`.
 - Uses form field name `photo` and sends the same cropped JPEG that passed validation.
 - Sends cookies/credentials (`withCredentials: true`).

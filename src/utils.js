@@ -105,7 +105,8 @@ export function createOutputFile(blob, sourceFileName) {
 }
 
 export function isAcceptedValidationResponse(payload) {
-  return payload?.report?.accept === true
+  const report = payload?.data?.report ?? payload?.report
+  return report?.accept === true
 }
 
 function sampleBilinear(data, width, height, x, y, channelOffset) {
