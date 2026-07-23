@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import PhotoUploadControls from './PhotoUploadControls'
 import PhotoUploadPreview from './PhotoUploadPreview'
 import PhotoUploadStepBadge from './PhotoUploadStepBadge'
@@ -23,6 +23,8 @@ function PhotoUploadFlow({
   saveUrl = '',
   onSaveSuccess,
 }) {
+  const fileInputId = useId()
+  const fileInputRef = useRef(null)
   const {
     currentStep,
     errorMessage,
@@ -73,6 +75,12 @@ function PhotoUploadFlow({
   useEffect(() => {
     onSavingChange?.(isSaving)
   }, [isSaving, onSavingChange])
+
+  useEffect(() => {
+    if (currentStep === 1 && !selectedFile && fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }, [currentStep, selectedFile])
 
   const footerButtonClassName = isModal ? 'uphoto-modal-step-btn' : ''
   const stepActionsColumnsClassName =
@@ -233,7 +241,7 @@ function PhotoUploadFlow({
               </p>
 
               <label
-                htmlFor="photo-upload"
+                htmlFor={fileInputId}
                 className="uphoto-file-drop"
               >
                 <span className="uphoto-file-drop__label">Select Image</span>
@@ -244,7 +252,8 @@ function PhotoUploadFlow({
               </label>
 
               <input
-                id="photo-upload"
+                ref={fileInputRef}
+                id={fileInputId}
                 type="file"
                 name="photo"
                 accept=".png,.jpg,.jpeg,image/png,image/jpeg"
