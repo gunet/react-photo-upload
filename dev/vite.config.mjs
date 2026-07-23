@@ -5,6 +5,7 @@ import { defineConfig } from 'vite'
 
 const devRoot = path.dirname(fileURLToPath(import.meta.url))
 const packageRoot = path.resolve(devRoot, '..')
+const MOCK_VALIDATION_DELAY_MS = 3000
 
 function mockPhotoApi() {
   return {
@@ -18,13 +19,15 @@ function mockPhotoApi() {
           return
         }
 
-        response.setHeader('Content-Type', 'application/json')
-        response.end(
-          JSON.stringify({
-            report: { accept: true },
-            message: 'Mock validation passed.',
-          }),
-        )
+        setTimeout(() => {
+          response.setHeader('Content-Type', 'application/json')
+          response.end(
+            JSON.stringify({
+              report: { accept: true },
+              message: 'Mock validation passed.',
+            }),
+          )
+        }, MOCK_VALIDATION_DELAY_MS)
       })
 
       server.middlewares.use('/api/save-photo', (request, response) => {
