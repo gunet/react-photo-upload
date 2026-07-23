@@ -48,6 +48,10 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
   const [saveMessage, setSaveMessage] = useState('')
   const [saveResponseData, setSaveResponseData] = useState(null)
   const dragStateRef = useRef(null)
+  const validationRequestIdRef = useRef(0)
+  const validationAbortControllerRef = useRef(null)
+  const saveRequestIdRef = useRef(0)
+  const saveAbortControllerRef = useRef(null)
 
   const clearSelection = () => {
     setSelectedFile(null)
@@ -68,14 +72,47 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
     })
   }
 
-  const invalidateValidation = () => {
+  const clearValidationState = () => {
     setResponseData(null)
     clearValidatedCroppedAsset()
     setSaveMessage('')
     setSaveResponseData(null)
   }
 
-  useEffect(() => () => clearValidatedCroppedAsset(), [])
+  const cancelValidationRequest = () => {
+    validationRequestIdRef.current += 1
+    validationAbortControllerRef.current?.abort()
+    validationAbortControllerRef.current = null
+  }
+
+  const invalidateValidation = () => {
+    cancelValidationRequest()
+    setIsUploading(false)
+    clearValidationState()
+  }
+
+  const isCurrentValidationRequest = (requestId, controller) =>
+    validationRequestIdRef.current === requestId &&
+    validationAbortControllerRef.current === controller &&
+    !controller.signal.aborted
+
+  const isCurrentSaveRequest = (requestId, controller) =>
+    saveRequestIdRef.current === requestId &&
+    saveAbortControllerRef.current === controller &&
+    !controller.signal.aborted
+
+  useEffect(
+    () => () => {
+      validationRequestIdRef.current += 1
+      validationAbortControllerRef.current?.abort()
+      validationAbortControllerRef.current = null
+      saveRequestIdRef.current += 1
+      saveAbortControllerRef.current?.abort()
+      saveAbortControllerRef.current = null
+      clearValidatedCroppedAsset()
+    },
+    [],
+  )
 
   useEffect(() => {
     if (!selectedFile || !previewUrl) {
@@ -132,6 +169,10 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
     buildPreviewMetrics(imageDimensions, zoom, horizontalOffset, verticalOffset)
 
   const applyOffsetDelta = (deltaX, deltaY) => {
+    if (isSaving) {
+      return
+    }
+
     const previewMetrics = getCurrentPreviewMetrics()
 
     if (!previewMetrics) {
@@ -154,6 +195,10 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
   }
 
   const resetAlignment = () => {
+    if (isSaving) {
+      return
+    }
+
     invalidateValidation()
     setZoom(1)
     setHorizontalOffset(0)
@@ -161,6 +206,10 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
   }
 
   const handlePointerDown = (event, pointerScale = 1) => {
+    if (isUploading || isSaving) {
+      return
+    }
+
     const previewMetrics = getCurrentPreviewMetrics()
 
     if (!previewMetrics || (!previewMetrics.xRange && !previewMetrics.yRange)) {
@@ -209,6 +258,10 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
   }
 
   const handleZoomChange = (direction) => {
+    if (isUploading || isSaving) {
+      return
+    }
+
     invalidateValidation()
     setZoom((current) => clamp(current + direction * ZOOM_STEP, 1, 2.5))
   }
@@ -218,6 +271,10 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
   }
 
   const handleFileChange = (event) => {
+    if (isSaving) {
+      return
+    }
+
     const file = event.target.files?.[0] ?? null
     invalidateValidation()
     setCurrentStep(1)
@@ -249,18 +306,21 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
     setErrorMessage('')
   }
 
-  const prepareCroppedCanvas = async () => {
-    if (!selectedFile || !previewUrl || !imageDimensions) {
+  const prepareCroppedCanvas = async ({
+    sourceFile = selectedFile,
+    sourcePreviewUrl = previewUrl,
+    sourceImageDimensions = imageDimensions,
+    sourcePreviewMetrics = getCurrentPreviewMetrics(),
+  } = {}) => {
+    if (!sourceFile || !sourcePreviewUrl || !sourceImageDimensions) {
       throw new Error('Please select and align an image before uploading.')
     }
 
-    const previewMetrics = getCurrentPreviewMetrics()
-
-    if (!previewMetrics) {
+    if (!sourcePreviewMetrics) {
       throw new Error(ALIGNMENT_NOT_READY_ERROR_MESSAGE)
     }
 
-    return createCroppedCanvas(previewUrl, previewMetrics)
+    return createCroppedCanvas(sourcePreviewUrl, sourcePreviewMetrics)
   }
 
   const handleDownloadCropped = async () => {
@@ -290,6 +350,10 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
   const handleSubmit = async (event) => {
     event?.preventDefault?.()
 
+    if (validationAbortControllerRef.current || isSaving) {
+      return
+    }
+
     if (!selectedFile) {
       setErrorMessage(SELECT_IMAGE_ERROR_MESSAGE)
       return
@@ -300,21 +364,51 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
       return
     }
 
-    setIsUploading(true)
+    const sourceFile = selectedFile
+    const sourcePreviewUrl = previewUrl
+    const sourceImageDimensions = imageDimensions
+    const sourcePreviewMetrics = getCurrentPreviewMetrics()
+    const requestId = validationRequestIdRef.current + 1
+    const controller = new AbortController()
+
+    validationRequestIdRef.current = requestId
+    validationAbortControllerRef.current = controller
+
     setErrorMessage('')
-    invalidateValidation()
+    clearValidationState()
+    setIsUploading(true)
 
     try {
-      const canvas = await prepareCroppedCanvas()
+      const canvas = await prepareCroppedCanvas({
+        sourceFile,
+        sourcePreviewUrl,
+        sourceImageDimensions,
+        sourcePreviewMetrics,
+      })
+
+      if (!isCurrentValidationRequest(requestId, controller)) {
+        return
+      }
+
       const croppedBlob = await createBlobFromCanvas(canvas)
-      const croppedFile = createOutputFile(croppedBlob, selectedFile.name)
+
+      if (!isCurrentValidationRequest(requestId, controller)) {
+        return
+      }
+
+      const croppedFile = createOutputFile(croppedBlob, sourceFile.name)
       const formData = new FormData()
       formData.append('photo', croppedFile)
 
       const response = await axios.post(validationUrl, formData, {
         withCredentials: true,
         validateStatus: () => true,
+        signal: controller.signal,
       })
+
+      if (!isCurrentValidationRequest(requestId, controller)) {
+        return
+      }
 
       const payload = response.data ?? null
 
@@ -337,13 +431,31 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
         setErrorMessage(payload?.message || PHOTO_NOT_ACCEPTED_ERROR_MESSAGE)
       }
     } catch (error) {
-      setErrorMessage(error.message || 'Unable to upload the photo right now.')
+      if (
+        !isCurrentValidationRequest(requestId, controller) ||
+        axios.isCancel(error) ||
+        error.code === 'ERR_CANCELED'
+      ) {
+        return
+      }
+
+      setErrorMessage(error.message || PHOTO_UPLOAD_FAILED_ERROR_MESSAGE)
     } finally {
-      setIsUploading(false)
+      if (
+        validationRequestIdRef.current === requestId &&
+        validationAbortControllerRef.current === controller
+      ) {
+        validationAbortControllerRef.current = null
+        setIsUploading(false)
+      }
     }
   }
 
   const handleSave = async () => {
+    if (saveAbortControllerRef.current || isUploading) {
+      return
+    }
+
     if (!isAcceptedValidationResponse(responseData) || !validatedCroppedBlob) {
       setErrorMessage(PHOTO_NOT_ACCEPTED_ERROR_MESSAGE)
       return
@@ -354,17 +466,27 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
       return
     }
 
-    setIsSaving(true)
+    const croppedBlob = validatedCroppedBlob
+    const croppedFileName = validatedCroppedFileName
+    const requestId = saveRequestIdRef.current + 1
+    const controller = new AbortController()
+    let didSave = false
+    let savedPayload = null
+
+    saveRequestIdRef.current = requestId
+    saveAbortControllerRef.current = controller
+
     setErrorMessage('')
     setSaveMessage('')
     setSaveResponseData(null)
+    setIsSaving(true)
 
     try {
       const croppedFile = new File(
-        [validatedCroppedBlob],
-        validatedCroppedFileName,
+        [croppedBlob],
+        croppedFileName,
         {
-          type: validatedCroppedBlob.type,
+          type: croppedBlob.type,
           lastModified: Date.now(),
         },
       )
@@ -374,7 +496,13 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
       const response = await axios.post(saveUrl, formData, {
         withCredentials: true,
         validateStatus: () => true,
+        signal: controller.signal,
       })
+
+      if (!isCurrentSaveRequest(requestId, controller)) {
+        return
+      }
+
       const payload = response.data ?? null
 
       if (response.status < 200 || response.status >= 300) {
@@ -383,11 +511,30 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
 
       setSaveResponseData(payload)
       setSaveMessage(payload?.message || PHOTO_SAVE_SUCCESS_MESSAGE)
-      onSaveSuccess?.(payload)
+      savedPayload = payload
+      didSave = true
     } catch (error) {
+      if (
+        !isCurrentSaveRequest(requestId, controller) ||
+        axios.isCancel(error) ||
+        error.code === 'ERR_CANCELED'
+      ) {
+        return
+      }
+
       setErrorMessage(error.message || PHOTO_SAVE_FAILED_ERROR_MESSAGE)
     } finally {
-      setIsSaving(false)
+      if (
+        saveRequestIdRef.current === requestId &&
+        saveAbortControllerRef.current === controller
+      ) {
+        saveAbortControllerRef.current = null
+        setIsSaving(false)
+      }
+    }
+
+    if (didSave && saveRequestIdRef.current === requestId) {
+      onSaveSuccess?.(savedPayload)
     }
   }
 

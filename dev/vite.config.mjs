@@ -19,7 +19,7 @@ function mockPhotoApi() {
           return
         }
 
-        setTimeout(() => {
+        const validationTimer = setTimeout(() => {
           response.setHeader('Content-Type', 'application/json')
           response.end(
             JSON.stringify({
@@ -28,6 +28,8 @@ function mockPhotoApi() {
             }),
           )
         }, MOCK_VALIDATION_DELAY_MS)
+
+        response.on('close', () => clearTimeout(validationTimer))
       })
 
       server.middlewares.use('/api/save-photo', (request, response) => {

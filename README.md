@@ -60,6 +60,8 @@ Validation submit behavior:
 - Converts the cropped output to JPEG (`1200x1600`) with filename format `<original-name>-3x4.jpg`.
 - Treats validation as accepted only when `response.data.report.accept === true`, or, if the
   response body wraps its payload in a `data` envelope, `response.data.data.report.accept === true`.
+- Captures the exact file and crop used for each request, cancels obsolete requests, and ignores
+  stale responses so an older validation cannot enable saving for a newer crop.
 
 Minimal success response example (flat):
 
@@ -92,6 +94,7 @@ Save behavior:
 - Uses form field name `photo` and sends the same cropped JPEG that passed validation.
 - Sends cookies/credentials (`withCredentials: true`).
 - Treats any `2xx` response as successful.
+- Prevents duplicate save requests while a save is already in progress.
 - Closes the upload modal automatically after a successful save. Inline flows remain open.
 
 ## File Rules

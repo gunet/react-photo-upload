@@ -6,6 +6,7 @@ function PhotoUploadControls({
   onZoomChange,
   onNudge,
   onReset,
+  disabled = false,
 }) {
   return (
     <div className="uphoto-controls">
@@ -15,10 +16,10 @@ function PhotoUploadControls({
           <span className="uphoto-controls__value">{zoom.toFixed(1)}x</span>
         </div>
         <div className="uphoto-controls__zoom-actions">
-          <ActionButton type="button" onClick={() => onZoomChange(-1)} className="uphoto-controls__zoom-btn">
+          <ActionButton type="button" disabled={disabled} onClick={() => onZoomChange(-1)} className="uphoto-controls__zoom-btn">
             Zoom Out
           </ActionButton>
-          <ActionButton type="button" onClick={() => onZoomChange(1)} className="uphoto-controls__zoom-btn">
+          <ActionButton type="button" disabled={disabled} onClick={() => onZoomChange(1)} className="uphoto-controls__zoom-btn">
             Zoom In
           </ActionButton>
         </div>
@@ -29,13 +30,13 @@ function PhotoUploadControls({
         <div className="uphoto-controls__pad-wrap">
           <div className="uphoto-controls__pad">
             <span />
-            <ActionButton type="button" onClick={() => onNudge(0, -offsetStep)} className="uphoto-controls__nudge-btn">↑</ActionButton>
+            <ActionButton type="button" disabled={disabled} onClick={() => onNudge(0, -offsetStep)} className="uphoto-controls__nudge-btn">↑</ActionButton>
             <span />
-            <ActionButton type="button" onClick={() => onNudge(-offsetStep, 0)} className="uphoto-controls__nudge-btn">←</ActionButton>
-            <ActionButton type="button" onClick={onReset} className="uphoto-controls__nudge-btn uphoto-controls__reset-btn">Reset</ActionButton>
-            <ActionButton type="button" onClick={() => onNudge(offsetStep, 0)} className="uphoto-controls__nudge-btn">→</ActionButton>
+            <ActionButton type="button" disabled={disabled} onClick={() => onNudge(-offsetStep, 0)} className="uphoto-controls__nudge-btn">←</ActionButton>
+            <ActionButton type="button" disabled={disabled} onClick={onReset} className="uphoto-controls__nudge-btn uphoto-controls__reset-btn">Reset</ActionButton>
+            <ActionButton type="button" disabled={disabled} onClick={() => onNudge(offsetStep, 0)} className="uphoto-controls__nudge-btn">→</ActionButton>
             <span />
-            <ActionButton type="button" onClick={() => onNudge(0, offsetStep)} className="uphoto-controls__nudge-btn">↓</ActionButton>
+            <ActionButton type="button" disabled={disabled} onClick={() => onNudge(0, offsetStep)} className="uphoto-controls__nudge-btn">↓</ActionButton>
             <span />
           </div>
         </div>

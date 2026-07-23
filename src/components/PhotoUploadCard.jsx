@@ -15,7 +15,14 @@ function joinClassNames(...classNames) {
   return classNames.filter(Boolean).join(' ')
 }
 
-function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUrl = '', onSaveSuccess }) {
+function PhotoUploadFlow({
+  isModal = false,
+  onCancel,
+  onSavingChange,
+  validationUrl = '',
+  saveUrl = '',
+  onSaveSuccess,
+}) {
   const {
     currentStep,
     errorMessage,
@@ -47,10 +54,10 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
     validationUrl,
     saveUrl,
     onSaveSuccess: (payload) => {
-      onSaveSuccess?.(payload)
       if (isModal) {
-        onCancel?.()
+        onCancel?.({ force: true })
       }
+      onSaveSuccess?.(payload)
     },
   })
   const [viewportWidth, setViewportWidth] = useState(
@@ -62,6 +69,10 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
+
+  useEffect(() => {
+    onSavingChange?.(isSaving)
+  }, [isSaving, onSavingChange])
 
   const footerButtonClassName = isModal ? 'uphoto-modal-step-btn' : ''
   const stepActionsColumnsClassName =
@@ -87,13 +98,18 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
     if (currentStep === 2) {
       return (
         <>
-          <ActionButton type="button" onClick={() => setCurrentStep(1)} className={footerButtonClassName}>
+          <ActionButton
+            type="button"
+            disabled={isUploading || isSaving}
+            onClick={() => setCurrentStep(1)}
+            className={footerButtonClassName}
+          >
             Back
           </ActionButton>
           <ActionButton
             type="button"
             variant="primary"
-            disabled={isUploading || !selectedFile || !imageDimensions}
+            disabled={isUploading || isSaving || !selectedFile || !imageDimensions}
             onClick={handleSubmit}
             className={footerButtonClassName}
           >
@@ -111,7 +127,7 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
           <ActionButton
             type="button"
             variant="primary"
-            disabled={!isValidated || isSaving}
+            disabled={!isValidated || isUploading || isSaving}
             onClick={handleSave}
             className={footerButtonClassName}
           >
@@ -276,24 +292,25 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
                     previewUrl={previewUrl}
                     previewMetrics={previewMetrics}
                     showGuide
+                    interactive={!isUploading && !isSaving}
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                   />
 
                   <div className="uphoto-mobile-controls">
-                    <ActionButton type="button" onClick={resetAlignment} className="uphoto-icon-btn" aria-label="Reset position">
+                    <ActionButton type="button" disabled={isUploading || isSaving} onClick={resetAlignment} className="uphoto-icon-btn" aria-label="Reset position">
                       <svg viewBox="0 0 24 24" aria-hidden="true" className="uphoto-icon-svg">
                         <path d="M7.8 7.8A6 6 0 1 1 6 12M6 7.8V4.5M6 7.8h3.3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
                       </svg>
                     </ActionButton>
-                    <ActionButton type="button" onClick={() => handleZoomChange(-1)} className="uphoto-icon-btn" aria-label="Zoom out">
+                    <ActionButton type="button" disabled={isUploading || isSaving} onClick={() => handleZoomChange(-1)} className="uphoto-icon-btn" aria-label="Zoom out">
                       <svg viewBox="0 0 24 24" aria-hidden="true" className="uphoto-icon-svg">
                         <circle cx="10.5" cy="10.5" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
                         <path d="M15 15 20 20M8 10.5h5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
                       </svg>
                     </ActionButton>
-                    <ActionButton type="button" onClick={() => handleZoomChange(1)} className="uphoto-icon-btn" aria-label="Zoom in">
+                    <ActionButton type="button" disabled={isUploading || isSaving} onClick={() => handleZoomChange(1)} className="uphoto-icon-btn" aria-label="Zoom in">
                       <svg viewBox="0 0 24 24" aria-hidden="true" className="uphoto-icon-svg">
                         <circle cx="10.5" cy="10.5" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
                         <path d="M15 15 20 20M8 10.5h5M10.5 8v5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
@@ -309,6 +326,7 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
                     onZoomChange={handleZoomChange}
                     onNudge={handleNudge}
                     onReset={resetAlignment}
+                    disabled={isUploading || isSaving}
                   />
                 </div>
               </div>
@@ -321,7 +339,7 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
                       <button
                         type="button"
                         className="uphoto-link-btn"
-                        disabled={isUploading || (!validatedCroppedBlob && (!selectedFile || !imageDimensions))}
+                        disabled={isUploading || isSaving || (!validatedCroppedBlob && (!selectedFile || !imageDimensions))}
                         onClick={handleDownloadCropped}
                       >
                         <svg viewBox="0 0 20 20" aria-hidden="true" className="uphoto-link-btn__icon">
@@ -377,7 +395,7 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
               <div className={`uphoto-modal-actions ${stepActionsColumnsClassName}`}>
                 {stepActions}
               </div>
-              <ActionButton type="button" onClick={onCancel} className="uphoto-modal-cancel-btn">
+              <ActionButton type="button" disabled={isSaving} onClick={onCancel} className="uphoto-modal-cancel-btn">
                 Cancel
               </ActionButton>
             </div>
@@ -401,6 +419,16 @@ function PhotoUploadCard({
   onSaveSuccess,
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isModalSaving, setIsModalSaving] = useState(false)
+
+  const closeModal = ({ force = false } = {}) => {
+    if (isModalSaving && !force) {
+      return
+    }
+
+    setIsModalSaving(false)
+    setIsModalOpen(false)
+  }
 
   useEffect(() => {
     if (!isModalOpen) {
@@ -429,7 +457,10 @@ function PhotoUploadCard({
         type="button"
         variant={openButtonVariant}
         className={openButtonClassName}
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => {
+          setIsModalSaving(false)
+          setIsModalOpen(true)
+        }}
       >
         {openButtonLabel}
       </ActionButton>
@@ -438,7 +469,7 @@ function PhotoUploadCard({
         <div
           className="uphoto-modal-overlay"
           role="presentation"
-          onClick={() => setIsModalOpen(false)}
+          onClick={closeModal}
         >
           <div
             className="uphoto-modal-dialog"
@@ -453,7 +484,8 @@ function PhotoUploadCard({
               validationUrl={validationUrl}
               saveUrl={saveUrl}
               onSaveSuccess={onSaveSuccess}
-              onCancel={() => setIsModalOpen(false)}
+              onCancel={closeModal}
+              onSavingChange={setIsModalSaving}
             />
           </div>
         </div>
