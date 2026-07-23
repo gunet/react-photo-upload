@@ -26,6 +26,7 @@ function PhotoUploadFlow({
   const {
     currentStep,
     errorMessage,
+    handleChangePhoto,
     handleDownloadCropped,
     handleFileChange,
     handleNudge,
@@ -46,7 +47,6 @@ function PhotoUploadFlow({
     responseData,
     saveMessage,
     selectedFile,
-    setCurrentStep,
     validatedCroppedBlob,
     validatedCroppedUrl,
     zoom,
@@ -82,17 +82,7 @@ function PhotoUploadFlow({
 
   const renderStepActions = () => {
     if (currentStep === 1) {
-      return (
-        <ActionButton
-          type="button"
-          variant="primary"
-          disabled={!hasSelectedImage}
-          onClick={() => setCurrentStep(2)}
-          className={footerButtonClassName}
-        >
-          Continue
-        </ActionButton>
-      )
+      return null
     }
 
     if (currentStep === 2) {
@@ -101,14 +91,15 @@ function PhotoUploadFlow({
           <ActionButton
             type="button"
             disabled={isUploading || isSaving}
-            onClick={() => setCurrentStep(1)}
+            onClick={handleChangePhoto}
             className={footerButtonClassName}
           >
-            Back
+            <span className="uphoto-mobile-only">Change</span>
+            <span className="uphoto-desktop-only-inline">Change Photo</span>
           </ActionButton>
           <ActionButton
             type="button"
-            variant="primary"
+            variant={isValidated ? 'secondary' : 'primary'}
             disabled={isUploading || isSaving || !selectedFile || !imageDimensions}
             onClick={handleSubmit}
             className={footerButtonClassName}
@@ -237,7 +228,9 @@ function PhotoUploadFlow({
         <div className={isModal ? 'uphoto-form-scroll' : ''}>
           {currentStep === 1 ? (
             <div>
-              <p className="uphoto-copy">Select a clear portrait photo to continue.</p>
+              <p className="uphoto-copy">
+                Select a clear portrait photo. The editor will open automatically.
+              </p>
 
               <label
                 htmlFor="photo-upload"
@@ -259,7 +252,7 @@ function PhotoUploadFlow({
                 className="uphoto-sr-only"
               />
 
-              {selectedFile ? (
+              {hasSelectedImage ? (
                 <div className="uphoto-file-meta">
                   <p className="uphoto-file-meta__name">{selectedFile.name}</p>
                   <p className="uphoto-file-meta__size">{formatMegabytes(selectedFile.size)}</p>
@@ -276,11 +269,10 @@ function PhotoUploadFlow({
               {errorMessage ? (
                 <p className="uphoto-alert uphoto-alert--error">{errorMessage}</p>
               ) : null}
-              {!errorMessage && isValidated ? (
-                <p className="uphoto-alert uphoto-alert--success">Photo validation completed successfully.</p>
-              ) : null}
               {saveMessage ? (
                 <p className="uphoto-alert uphoto-alert--success">{saveMessage}</p>
+              ) : !errorMessage && isValidated ? (
+                <p className="uphoto-alert uphoto-alert--success">Photo validation completed successfully.</p>
               ) : null}
 
               <div className="uphoto-step-two-layout">
@@ -386,15 +378,19 @@ function PhotoUploadFlow({
             <p className="uphoto-alert uphoto-alert--error uphoto-mt-lg">{errorMessage}</p>
           ) : null}
 
-          {!isModal ? <div className="uphoto-footer-actions">{stepActions}</div> : null}
+          {!isModal && stepActions ? (
+            <div className="uphoto-footer-actions">{stepActions}</div>
+          ) : null}
         </div>
 
         {isModal ? (
           <div className="uphoto-modal-footer">
             <div className="uphoto-modal-footer__row">
-              <div className={`uphoto-modal-actions ${stepActionsColumnsClassName}`}>
-                {stepActions}
-              </div>
+              {stepActions ? (
+                <div className={`uphoto-modal-actions ${stepActionsColumnsClassName}`}>
+                  {stepActions}
+                </div>
+              ) : null}
               <ActionButton type="button" disabled={isSaving} onClick={onCancel} className="uphoto-modal-cancel-btn">
                 Cancel
               </ActionButton>

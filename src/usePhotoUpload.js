@@ -270,6 +270,20 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
     applyOffsetDelta(deltaX, deltaY)
   }
 
+  const handleChangePhoto = () => {
+    if (isUploading || isSaving) {
+      return
+    }
+
+    invalidateValidation()
+    dragStateRef.current = null
+    setZoom(1)
+    setHorizontalOffset(0)
+    setVerticalOffset(0)
+    setErrorMessage('')
+    clearSelection()
+  }
+
   const handleFileChange = (event) => {
     if (isSaving) {
       return
@@ -546,6 +560,7 @@ export function usePhotoUpload({ validationUrl, saveUrl, onSaveSuccess } = {}) {
     currentStep,
     errorMessage,
     handleDownloadCropped,
+    handleChangePhoto,
     handleFileChange,
     handleNudge,
     handlePointerDown,
