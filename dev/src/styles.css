@@ -24,6 +24,17 @@ input {
   padding: 32px 0;
 }
 
+.dev-save-message {
+  max-width: 480px;
+  margin-top: 24px;
+  padding: 14px 16px;
+  border: 1px solid #b9d8c2;
+  border-radius: 12px;
+  background: #edf8f0;
+  color: #245c34;
+  font-weight: 600;
+}
+
 @media (max-width: 640px) {
   .dev-shell {
     width: min(100% - 20px, 1120px);
