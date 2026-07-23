@@ -38,7 +38,6 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
     resetAlignment,
     responseData,
     saveMessage,
-    saveResponseData,
     selectedFile,
     setCurrentStep,
     validatedCroppedBlob,
@@ -68,9 +67,7 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
   const stepActionsColumnsClassName =
     currentStep === 2
       ? 'uphoto-modal-actions--cols-3'
-      : currentStep === 3
-        ? 'uphoto-modal-actions--cols-2'
-        : 'uphoto-modal-actions--cols-1'
+      : 'uphoto-modal-actions--cols-1'
 
   const renderStepActions = () => {
     if (currentStep === 1) {
@@ -114,32 +111,15 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
           <ActionButton
             type="button"
             variant="primary"
-            disabled={!isValidated}
-            onClick={() => setCurrentStep(3)}
+            disabled={!isValidated || isSaving}
+            onClick={handleSave}
             className={footerButtonClassName}
           >
-            Continue
+            {isSaving ? 'Saving...' : 'Save'}
           </ActionButton>
         </>
       )
     }
-
-    return (
-      <>
-        <ActionButton type="button" onClick={() => setCurrentStep(2)} className={footerButtonClassName}>
-          Back
-        </ActionButton>
-        <ActionButton
-          type="button"
-          variant="primary"
-          disabled={!isValidated || isSaving}
-          onClick={handleSave}
-          className={footerButtonClassName}
-        >
-          {isSaving ? 'Saving...' : 'Save'}
-        </ActionButton>
-      </>
-    )
   }
 
   const stepActions = renderStepActions()
@@ -159,19 +139,15 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
       title: 'Choose your photo',
     },
     2: {
-      title: 'Align and validate',
-    },
-    3: {
-      title: 'Save your validated photo',
+      title: 'Align, validate, and save',
     },
   }
   const modalStepItems = [
     { number: 1, label: 'Choose', icon: 'upload' },
-    { number: 2, label: 'Align', icon: 'adjust' },
-    { number: 3, label: 'Save', icon: 'save' },
+    { number: 2, label: 'Align & Save', icon: 'save' },
   ]
   const activeStepHeader = stepHeaderContent[currentStep] || stepHeaderContent[1]
-  const completedStepsCount = Math.max(1, Math.min(currentStep, 3))
+  const completedStepsCount = Math.max(1, Math.min(currentStep, 2))
   const flowClassName = `uphoto-photo-upload ${
     isModal ? 'uphoto-photo-upload--modal' : 'uphoto-photo-upload--inline'
   }`
@@ -212,11 +188,6 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
                             <path d="M10 13V5m0 0 3 3m-3-3-3 3M4.5 14.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
                           </svg>
                         ) : null}
-                        {step.icon === 'adjust' ? (
-                          <svg viewBox="0 0 20 20" aria-hidden="true" className="uphoto-modal-step-svg">
-                            <path d="M4 10h12M10 4v12" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
-                          </svg>
-                        ) : null}
                         {step.icon === 'save' ? (
                           <svg viewBox="0 0 20 20" aria-hidden="true" className="uphoto-modal-step-svg">
                             <path d="M5.5 4.5h9l1 1v10h-11v-11Zm2 0v4h5v-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
@@ -229,7 +200,7 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
                     </div>
                   )
                 })}
-                <p className="uphoto-modal-step-count">{`Step ${completedStepsCount}/3`}</p>
+                <p className="uphoto-modal-step-count">{`Step ${completedStepsCount}/2`}</p>
               </div>
             </div>
           </div>
@@ -238,8 +209,7 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
         <div className="uphoto-step-badges-wrap">
           <div className="uphoto-step-badges-grid">
             <PhotoUploadStepBadge number="1" title="Choose" isActive={currentStep === 1} isComplete={hasSelectedImage} />
-            <PhotoUploadStepBadge number="2" title="Align & Validate" isActive={currentStep === 2} isComplete={isValidated} />
-            <PhotoUploadStepBadge number="3" title="Save" isActive={currentStep === 3 || isUploading} isComplete={false} />
+            <PhotoUploadStepBadge number="2" title="Align, Validate & Save" isActive={currentStep === 2} isComplete={Boolean(saveMessage)} />
           </div>
         </div>
       )}
@@ -292,6 +262,9 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
               ) : null}
               {!errorMessage && isValidated ? (
                 <p className="uphoto-alert uphoto-alert--success">Photo validation completed successfully.</p>
+              ) : null}
+              {saveMessage ? (
+                <p className="uphoto-alert uphoto-alert--success">{saveMessage}</p>
               ) : null}
 
               <div className="uphoto-step-two-layout">
@@ -387,49 +360,6 @@ function PhotoUploadFlow({ isModal = false, onCancel, validationUrl = '', saveUr
                     </pre>
                   </div>
                 </>
-              ) : null}
-            </div>
-          ) : null}
-
-          {currentStep === 3 ? (
-            <div className="uphoto-step-three">
-              <div>
-                <p className="uphoto-copy">The photo is already validated. Continue with save when you are ready.</p>
-              </div>
-
-              {errorMessage ? (
-                <p className="uphoto-alert uphoto-alert--error">{errorMessage}</p>
-              ) : null}
-
-              <div className="uphoto-info-card">
-                <p className="uphoto-label">Validated Preview</p>
-                <div className="uphoto-preview-center">
-                  <PhotoUploadPreview
-                    frameWidth={previewFrameWidth}
-                    frameHeight={previewFrameHeight}
-                    displayScale={previewDisplayScale}
-                    previewUrl={previewUrl}
-                    previewMetrics={previewMetrics}
-                    interactive={false}
-                    onPointerDown={handlePointerDown}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                  />
-                </div>
-                <p className="uphoto-copy uphoto-copy--center uphoto-mt-md">
-                  This preview is fixed here for confirmation only.
-                </p>
-              </div>
-
-              {saveMessage ? (
-                <p className="uphoto-alert uphoto-alert--success">{saveMessage}</p>
-              ) : null}
-
-              {saveResponseData ? (
-                <div className="uphoto-info-card">
-                  <p className="uphoto-label">Save Response</p>
-                  <pre className="uphoto-response-pre">{JSON.stringify(saveResponseData, null, 2)}</pre>
-                </div>
               ) : null}
             </div>
           ) : null}

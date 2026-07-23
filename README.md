@@ -1,6 +1,6 @@
 # @uphoto/photo-upload
 
-Reusable React photo upload flow with crop, validation request, and review steps.
+Reusable two-step React photo upload flow with crop, validation, and save actions.
 Includes plain compiled CSS; no Tailwind setup is required in consumer apps.
 
 ## Install
